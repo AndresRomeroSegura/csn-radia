@@ -1,0 +1,459 @@
+import React, { useState, useCallback, useMemo } from 'react';
+import type { ApexOptions } from 'apexcharts';
+import ReactApexChart from 'react-apexcharts';
+import {
+  Box,
+  Typography,
+  Paper,
+  IconButton,
+  Tooltip,
+  Chip,
+  Divider,
+  Alert,
+} from '@mui/material';
+import {
+  FileDownload,
+  GridOn,
+  GridOff,
+  ErrorOutline,
+  BarChart,
+  ShowChart,
+  PieChart,
+  DonutLarge,
+  StackedBarChart,
+} from '@mui/icons-material';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRATO JSON v2.0 (tal cual define el documento de RADIA)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface RenderPayload {
+  request_id: string;
+  original_query: string;
+  data: Record<string, unknown>[];
+  config: {
+    title: string;
+    chart_type: 'bar' | 'line' | 'pie' | 'donut' | 'stacked_bar';
+    mapping: {
+      dimension: string;
+      metrics: string[];
+      group_by?: string;
+    };
+    styles: {
+      primary_color: string;
+      show_grid: boolean;
+      export_enabled: boolean;
+    };
+  };
+}
+
+interface VisualizationEngineProps {
+  payload: RenderPayload;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SEMÁNTICA DE COLORES — Obligatorio para hallazgos del CSN
+// ─────────────────────────────────────────────────────────────────────────────
+
+const IMPORTANCIA_COLORS: Record<string, string> = {
+  Verde: '#16a34a',
+  Blanco: '#cbd5e1',
+  Amarillo: '#eab308',
+  Rojo: '#dc2626',
+  // Fallbacks en inglés por si acaso
+  Green: '#16a34a',
+  White: '#cbd5e1',
+  Yellow: '#eab308',
+  Red: '#dc2626',
+};
+
+/** Genera una paleta armónica a partir del color primario cuando no hay semántica de colores */
+function generatePalette(primaryColor: string, count: number): string[] {
+  // Paleta institucional derivada del azul CSN + colores complementarios
+  const basePalette = [
+    primaryColor,
+    '#0ea5e9',
+    '#6366f1',
+    '#10b981',
+    '#f59e0b',
+    '#ef4444',
+    '#8b5cf6',
+    '#06b6d4',
+  ];
+  return Array.from({ length: count }, (_, i) => basePalette[i % basePalette.length]);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ICONO POR TIPO DE GRÁFICO
+// ─────────────────────────────────────────────────────────────────────────────
+
+const ChartIcon: React.FC<{ type: RenderPayload['config']['chart_type'] }> = ({ type }) => {
+  const icons = {
+    bar: <BarChart sx={{ fontSize: 18 }} />,
+    line: <ShowChart sx={{ fontSize: 18 }} />,
+    pie: <PieChart sx={{ fontSize: 18 }} />,
+    donut: <DonutLarge sx={{ fontSize: 18 }} />,
+    stacked_bar: <StackedBarChart sx={{ fontSize: 18 }} />,
+  };
+  return icons[type] ?? <BarChart sx={{ fontSize: 18 }} />;
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LÓGICA DE TRANSFORMACIÓN DE DATOS → SERIES DE APEXCHARTS
+// ─────────────────────────────────────────────────────────────────────────────
+
+function buildChartOptions(
+  payload: RenderPayload,
+  showGrid: boolean,
+): { series: ApexOptions['series']; options: ApexOptions } {
+  const { data, config } = payload;
+  const { chart_type, mapping, styles } = config;
+  const { dimension, metrics, group_by } = mapping;
+  const primaryColor = styles.primary_color || '#003DA5';
+
+  // ── Opciones base comunes ──────────────────────────────────────────────────
+  const baseOptions: ApexOptions = {
+    chart: {
+      toolbar: { show: false },
+      fontFamily: "'IBM Plex Sans', 'Segoe UI', sans-serif",
+      background: 'transparent',
+      animations: { enabled: true, speed: 600 },
+    },
+    title: {
+      text: undefined, // Lo renderizamos nosotros fuera del canvas
+    },
+    tooltip: {
+      theme: 'dark',
+      style: { fontFamily: "'IBM Plex Sans', sans-serif" },
+    },
+    legend: {
+      show: true,
+      position: 'bottom',
+      fontFamily: "'IBM Plex Sans', sans-serif",
+      fontSize: '12px',
+      labels: { colors: '#64748b' },
+    },
+    grid: {
+      show: showGrid,
+      borderColor: '#e2e8f0',
+      strokeDashArray: 4,
+    },
+    theme: { mode: 'light' },
+  };
+
+  // ── PIE / DONUT ────────────────────────────────────────────────────────────
+  if (chart_type === 'pie' || chart_type === 'donut') {
+    const labels = data.map((row) => String(row[dimension] ?? ''));
+    const values = data.map((row) => Number(row[metrics[0]] ?? 0));
+    const colors = labels.map(
+      (label) => IMPORTANCIA_COLORS[label] ?? generatePalette(primaryColor, labels.length)[labels.indexOf(label)],
+    );
+
+    return {
+      series: values as number[],
+      options: {
+        ...baseOptions,
+        chart: { ...baseOptions.chart, type: chart_type === 'donut' ? 'donut' : 'pie' },
+        labels,
+        colors,
+        plotOptions: {
+          pie: {
+            donut: { size: '60%', labels: { show: true, total: { show: true, label: 'Total', color: '#475569' } } },
+          },
+        },
+        dataLabels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '12px' } },
+      },
+    };
+  }
+
+  // ── STACKED BAR (con group_by) ─────────────────────────────────────────────
+  if (chart_type === 'stacked_bar' && group_by) {
+    const categories = [...new Set(data.map((row) => String(row[dimension] ?? '')))];
+    const groups = [...new Set(data.map((row) => String(row[group_by] ?? '')))];
+    const metric = metrics[0];
+
+    const series = groups.map((group) => {
+      const seriesData = categories.map((cat) => {
+        const match = data.find(
+          (row) => String(row[dimension]) === cat && String(row[group_by]) === group,
+        );
+        return Number(match?.[metric] ?? 0);
+      });
+      return { name: group, data: seriesData };
+    });
+
+    const colors = groups.map(
+      (g) => IMPORTANCIA_COLORS[g] ?? generatePalette(primaryColor, groups.length)[groups.indexOf(g)],
+    );
+
+    return {
+      series,
+      options: {
+        ...baseOptions,
+        chart: { ...baseOptions.chart, type: 'bar', stacked: true },
+        colors,
+        xaxis: {
+          categories,
+          labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
+        },
+        yaxis: {
+          labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
+        },
+        plotOptions: { bar: { horizontal: false, borderRadius: 3, columnWidth: '55%' } },
+        dataLabels: { enabled: false },
+      },
+    };
+  }
+
+  // ── BAR / LINE (múltiples métricas o una sola) ─────────────────────────────
+  const categories = data.map((row) => String(row[dimension] ?? ''));
+  const palette = generatePalette(primaryColor, metrics.length);
+
+  const series = metrics.map((metric, idx) => ({
+    name: metric.replace(/_/g, ' '),
+    data: data.map((row) => Number(row[metric] ?? 0)),
+    color: palette[idx],
+  }));
+
+  const apexType: 'line' | 'bar' | 'pie' | 'donut' | 'area' | 'scatter' = chart_type === 'line' ? 'line' : 'bar';
+
+  return {
+    series,
+    options: {
+      ...baseOptions,
+      chart: { ...baseOptions.chart, type: apexType },
+      colors: palette,
+      xaxis: {
+        categories,
+        labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
+        axisBorder: { color: '#e2e8f0' },
+        axisTicks: { color: '#e2e8f0' },
+      },
+      yaxis: {
+        labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
+      },
+      plotOptions: {
+        bar: { horizontal: false, borderRadius: 4, columnWidth: metrics.length > 1 ? '60%' : '40%' },
+      },
+      stroke: chart_type === 'line' ? { curve: 'smooth', width: 3 } : { show: false },
+      markers: chart_type === 'line' ? { size: 5, strokeWidth: 0 } : {},
+      dataLabels: { enabled: false },
+      fill: chart_type === 'line' ? { type: 'gradient', gradient: { shade: 'light', type: 'vertical', opacityFrom: 0.4, opacityTo: 0 } } : { opacity: 1 },
+    },
+  };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// VALIDACIÓN DE PAYLOAD
+// ─────────────────────────────────────────────────────────────────────────────
+
+function validatePayload(payload: RenderPayload): string | null {
+  if (!payload?.config) return 'El payload no contiene el nodo config.';
+  if (!payload.data || payload.data.length === 0) return 'El array data está vacío.';
+  const { mapping, chart_type } = payload.config;
+  if (!mapping?.dimension) return 'config.mapping.dimension no está definido.';
+  if (!mapping?.metrics?.length) return 'config.mapping.metrics está vacío.';
+  if (chart_type === 'stacked_bar' && !mapping.group_by)
+    return 'chart_type stacked_bar requiere config.mapping.group_by.';
+  return null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPONENTE PRINCIPAL: VisualizationEngine
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const VisualizationEngine: React.FC<VisualizationEngineProps> = ({ payload }) => {
+  const [showGrid, setShowGrid] = useState(payload?.config?.styles?.show_grid ?? true);
+
+  const validationError = useMemo(() => validatePayload(payload), [payload]);
+
+  const { series, options } = useMemo(() => {
+    if (validationError) return { series: [], options: {} };
+    return buildChartOptions(payload, showGrid);
+  }, [payload, showGrid, validationError]);
+
+  const handleExport = useCallback(() => {
+    // Dispara el download nativo de ApexCharts a PNG
+    if (typeof window !== 'undefined') {
+      const chartEl = document.querySelector(`#apex-chart-${payload.request_id} .apexcharts-canvas`);
+      if (chartEl) {
+        const svg = chartEl.querySelector('svg');
+        if (!svg) return;
+        const svgData = new XMLSerializer().serializeToString(svg);
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        const img = new Image();
+        img.onload = () => {
+          canvas.width = img.width;
+          canvas.height = img.height;
+          ctx?.drawImage(img, 0, 0);
+          const link = document.createElement('a');
+          link.download = `${payload.config.title.replace(/\s+/g, '_')}.png`;
+          link.href = canvas.toDataURL('image/png');
+          link.click();
+        };
+        img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+      }
+    }
+  }, [payload]);
+
+  // ── Render: Error de validación ──────────────────────────────────────────
+  if (validationError) {
+    return (
+      <Alert
+        severity="error"
+        icon={<ErrorOutline />}
+        sx={{ borderRadius: 2, fontFamily: "'IBM Plex Sans', sans-serif" }}
+      >
+        <strong>Error de contrato:</strong> {validationError}
+      </Alert>
+    );
+  }
+
+  const { config } = payload;
+  const exportEnabled = config.styles.export_enabled;
+
+  // ── Render: Gráfico ──────────────────────────────────────────────────────
+  return (
+    <Paper
+      elevation={0}
+      sx={{
+        border: '1px solid #e2e8f0',
+        borderRadius: 3,
+        overflow: 'hidden',
+        bgcolor: '#ffffff',
+        fontFamily: "'IBM Plex Sans', sans-serif",
+      }}
+    >
+      {/* ── Cabecera ── */}
+      <Box
+        sx={{
+          px: 3,
+          py: 2,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          borderBottom: '1px solid #f1f5f9',
+          bgcolor: '#fafbfc',
+        }}
+      >
+        <Box display="flex" alignItems="center" gap={1.5}>
+          <Box
+            sx={{
+              width: 32,
+              height: 32,
+              borderRadius: 1.5,
+              bgcolor: config.styles.primary_color,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#fff',
+              flexShrink: 0,
+            }}
+          >
+            <ChartIcon type={config.chart_type} />
+          </Box>
+          <Box>
+            <Typography
+              variant="subtitle1"
+              fontWeight={700}
+              color="#1e293b"
+              sx={{ fontFamily: "'IBM Plex Sans', sans-serif", lineHeight: 1.2 }}
+            >
+              {config.title}
+            </Typography>
+            <Typography
+              variant="caption"
+              color="#94a3b8"
+              sx={{ fontFamily: "'IBM Plex Sans', sans-serif" }}
+            >
+              {payload.original_query}
+            </Typography>
+          </Box>
+        </Box>
+
+        {/* Controles */}
+        <Box display="flex" alignItems="center" gap={0.5}>
+          <Chip
+            label={config.chart_type.replace('_', ' ')}
+            size="small"
+            sx={{
+              fontFamily: "'IBM Plex Sans', sans-serif",
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              bgcolor: '#f1f5f9',
+              color: '#475569',
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              mr: 1,
+            }}
+          />
+          <Tooltip title={showGrid ? 'Ocultar cuadrícula' : 'Mostrar cuadrícula'}>
+            <IconButton size="small" onClick={() => setShowGrid((v) => !v)} sx={{ color: '#94a3b8' }}>
+              {showGrid ? <GridOn fontSize="small" /> : <GridOff fontSize="small" />}
+            </IconButton>
+          </Tooltip>
+          {exportEnabled && (
+            <Tooltip title="Exportar PNG">
+              <IconButton size="small" onClick={handleExport} sx={{ color: '#94a3b8' }}>
+                <FileDownload fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
+        </Box>
+      </Box>
+
+      <Divider />
+
+      {/* ── Gráfico ── */}
+      <Box p={3} id={`apex-chart-${payload.request_id}`}>
+        <ReactApexChart
+          key={`${payload.request_id}-${showGrid}`}
+          series={series}
+          options={options}
+          type={
+            config.chart_type === 'stacked_bar'
+              ? 'bar'
+              : config.chart_type === 'donut'
+              ? 'donut'
+              : (config.chart_type as 'line' | 'bar' | 'pie' | 'donut' | 'area' | 'scatter')
+          }
+          height={380}
+          width="100%"
+        />
+      </Box>
+
+      {/* ── Footer con metadatos ── */}
+      <Box
+        sx={{
+          px: 3,
+          py: 1.5,
+          borderTop: '1px solid #f1f5f9',
+          bgcolor: '#fafbfc',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+        }}
+      >
+        <Typography
+          variant="caption"
+          color="#94a3b8"
+          sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+        >
+          {payload.data.length} registros · dim: {config.mapping.dimension} · métricas:{' '}
+          {config.mapping.metrics.join(', ')}
+          {config.mapping.group_by ? ` · agrupado por: ${config.mapping.group_by}` : ''}
+        </Typography>
+        <Typography
+          variant="caption"
+          color="#cbd5e1"
+          sx={{ fontFamily: 'monospace', fontSize: '0.7rem' }}
+        >
+          REQ {payload.request_id.split('-')[0]}
+        </Typography>
+      </Box>
+    </Paper>
+  );
+};
+
+export default VisualizationEngine;
