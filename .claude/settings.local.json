@@ -3,7 +3,26 @@
     "allow": [
       "Bash(cd /c/Users/romer/Desktop/nuclear/csn-radia && npm run build 2>&1)",
       "Bash(cd /c/Users/romer/Desktop/nuclear/csn-radia && npx surge dist 2>&1)",
-      "Bash(echo \"\" | timeout 2 cat 2>/dev/null; true)"
+      "Bash(echo \"\" | timeout 2 cat 2>/dev/null; true)",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const p = require\\(''./node_modules/recharts/package.json''\\); console.log\\(''recharts'', p.version\\)\")",
+      "Bash(npx tsc:*)",
+      "Bash(npm run:*)",
+      "Bash(pip install:*)",
+      "Bash(curl -s http://localhost:8000/examples)",
+      "Bash(netstat -ano)",
+      "Bash(findstr :8000)",
+      "Bash(cmd /c \"taskkill /PID 20084 /F 2>&1 & taskkill /PID 13932 /F 2>&1\" sleep 2 netstat -ano)",
+      "Bash(cmd /c \"taskkill /PID 20084 /F & taskkill /PID 13932 /F & taskkill /PID 19092 /F\")",
+      "Bash(curl -s http://localhost:8001/render/example/stacked_bar)",
+      "Bash(curl -s -X POST http://localhost:8001/render -H \"Content-Type: application/json\" -d \"{\"\"request_id\"\":\"\"test-001\"\",\"\"original_query\"\":\"\"Inspecciones por instalacion\"\",\"\"data\"\":[{\"\"instalacion\"\":\"\"Trillo\"\",\"\"total_inspecciones\"\":5},{\"\"instalacion\"\":\"\"Ascó I\"\",\"\"total_inspecciones\"\":8}],\"\"config\"\":{\"\"title\"\":\"\"Inspecciones por instalacion\"\",\"\"chart_type\"\":\"\"bar\"\",\"\"mapping\"\":{\"\"dimension\"\":\"\"instalacion\"\",\"\"metrics\"\":[\"\"total_inspecciones\"\"]},\"\"styles\"\":{\"\"primary_color\"\":\"\"#003DA5\"\",\"\"show_grid\"\":true,\"\"export_enabled\"\":true}}}\")",
+      "Bash(curl -s -X POST http://localhost:8001/render -H \"Content-Type: application/json\" -d \"{\"\"request_id\"\":\"\"test-001\"\",\"\"original_query\"\":\"\"Hallazgos\"\",\"\"data\"\":[{\"\"site\"\":\"\"Trillo\"\",\"\"count\"\":5},{\"\"site\"\":\"\"Cofrentes\"\",\"\"count\"\":8}],\"\"config\"\":{\"\"title\"\":\"\"Hallazgos\"\",\"\"chart_type\"\":\"\"bar\"\",\"\"mapping\"\":{\"\"dimension\"\":\"\"site\"\",\"\"metrics\"\":[\"\"count\"\"]},\"\"styles\"\":{\"\"primary_color\"\":\"\"#003DA5\"\",\"\"show_grid\"\":true,\"\"export_enabled\"\":true}}}\")",
+      "Bash(curl -s http://localhost:8001/openapi.json)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(''''Endpoints:'''', list\\(d[''''paths''''].keys\\(\\)\\)\\)\")",
+      "Bash(findstr \":8001 \")",
+      "Bash(findstr LISTENING)",
+      "Bash(curl -s http://localhost:8002/openapi.json)",
+      "Bash(python -c \":*)"
     ]
   }
 }
