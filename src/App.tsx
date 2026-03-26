@@ -157,10 +157,20 @@ const IMPORTANCIA_LABEL_MAP: Record<string, string> = {
   Rojo: 'Alta',
 };
 
+function formatDateValue(value: string): string {
+  if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return value;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
+}
+
 function formatDisplayValue(key: string, value: unknown): string {
   const text = String(value ?? '');
   if (key === 'importancia') {
     return IMPORTANCIA_LABEL_MAP[text] ?? text;
+  }
+  if (typeof value === 'string') {
+    return formatDateValue(text);
   }
   return text;
 }

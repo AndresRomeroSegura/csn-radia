@@ -105,54 +105,6 @@ function formatDimension(value: string): string {
   return String(value);
 }
 
-function isMonthlyDateSeries(data: any[], dimension: string): boolean {
-  return data.length > 0 && data.every((row) => {
-    const value = row[dimension];
-    return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}/.test(value) && !Number.isNaN(new Date(value).getTime());
-  });
-}
-
-function fillMissingMonthlyData(data: any[], dimension: string, metrics: string[]): any[] {
-  if (!isMonthlyDateSeries(data, dimension)) return data;
-
-  const sorted = [...data].sort(
-    (a, b) => new Date(String(a[dimension])).getTime() - new Date(String(b[dimension])).getTime(),
-  );
-
-  const byMonth = new Map<string, any>();
-  sorted.forEach((row) => {
-    const date = new Date(String(row[dimension]));
-    const key = `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
-    byMonth.set(key, row);
-  });
-
-  const first = new Date(String(sorted[0][dimension]));
-  const last = new Date(String(sorted[sorted.length - 1][dimension]));
-  const cursor = new Date(Date.UTC(first.getUTCFullYear(), first.getUTCMonth(), 1));
-  const end = new Date(Date.UTC(last.getUTCFullYear(), last.getUTCMonth(), 1));
-  const filled: any[] = [];
-
-  while (cursor <= end) {
-    const key = `${cursor.getUTCFullYear()}-${String(cursor.getUTCMonth() + 1).padStart(2, '0')}`;
-    const existing = byMonth.get(key);
-    const isoMonth = `${key}-01T00:00:00.000Z`;
-
-    if (existing) {
-      filled.push(existing);
-    } else {
-      const row: any = { [dimension]: isoMonth };
-      metrics.forEach((metric) => {
-        row[metric] = 0;
-      });
-      filled.push(row);
-    }
-
-    cursor.setUTCMonth(cursor.getUTCMonth() + 1);
-  }
-
-  return filled;
-}
-
 // Pivota datos "long format" de SQL a formato ancho que Recharts necesita
 // Ejemplo: [{anio: 2024, instalacion: "Ascó I", total: 2}, ...]
 //       → [{anio: 2024, "Ascó I": 2, "Cofrentes": 1}, ...]
@@ -199,11 +151,6 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
     return null;
   }, [data, config.chart_type, mapping]);
 
-  const lineData = useMemo(() => {
-    if (config.chart_type !== 'line') return data;
-    return fillMissingMonthlyData(data, mapping.dimension, mapping.metrics);
-  }, [data, config.chart_type, mapping.dimension, mapping.metrics]);
-
   const renderChart = () => {
     switch (config.chart_type) {
 
@@ -240,7 +187,7 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
       // ── Líneas: series temporales ──────────────────────────────────────────
       case 'line':
         return (
-          <LineChart data={lineData} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
+          <LineChart data={data} margin={{ top: 20, right: 30, left: 0, bottom: 20 }}>
             {styles.show_grid && <CartesianGrid strokeDasharray="3 3" vertical={false} />}
             <XAxis
               dataKey={mapping.dimension}
