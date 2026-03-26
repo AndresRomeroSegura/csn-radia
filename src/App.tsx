@@ -224,17 +224,6 @@ function generateAIText(payload: ApiPayload): string {
   );
 }
 
-function exportCSV(payload: ApiPayload) {
-  const { data, config } = payload;
-  const headers = Object.keys(data[0] ?? {});
-  const csv = [headers.join(','), ...data.map((r) => headers.map((h) => String(r[h] ?? '')).join(','))].join('\n');
-  const a = Object.assign(document.createElement('a'), {
-    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8;' })),
-    download: `${config.title.replace(/\s+/g, '_')}.csv`,
-  });
-  a.click();
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Iconos SVG reutilizables
 // ─────────────────────────────────────────────────────────────────────────────
@@ -277,11 +266,6 @@ const IconLogout = () => (
 const IconBarChart = () => (
   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
     <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
-  </svg>
-);
-const IconDownload = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
   </svg>
 );
 const IconGlobe = () => (
@@ -850,19 +834,6 @@ export default function App() {
                           >
                             <IconBarChart />
                             Ver Cuadro de Mandos
-                          </button>
-                          <button
-                            onClick={() => exportCSV(msg.payload!)}
-                            style={{
-                              display: 'flex', alignItems: 'center', gap: 7,
-                              background: '#fff', color: '#003DA5',
-                              border: '1.5px solid #003DA5',
-                              borderRadius: 7, padding: '9px 16px',
-                              fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
-                            }}
-                          >
-                            <IconDownload />
-                            Exportar a Excel
                           </button>
                         </div>
                       )}
