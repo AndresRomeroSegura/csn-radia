@@ -94,13 +94,13 @@ IMPORTANCIA_COLORS: dict[str, str] = {
 
 # Paleta genérica para series sin semántica de color
 GENERIC_PALETTE: list[str] = [
-    "#003DA5",  # Azul institucional CSN
-    "#00A3E0",  # Azul claro
-    "#F58220",  # Naranja
-    "#6366f1",
-    "#10b981",
-    "#f59e0b",
-    "#8b5cf6",
+    "#003DA5",
+    "#1A66D1",
+    "#002F7A",
+    "#4D88DB",
+    "#002764",
+    "#80AAE6",
+    "#B3CCF0",
 ]
 
 EXAMPLE_PAYLOADS: dict[str, dict] = {
