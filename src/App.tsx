@@ -680,7 +680,7 @@ export default function App() {
               </div>
               <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: '#475569' }}>
                 {apiStatus === 'offline'
-                  ? `RADIA no permite consultas hasta confirmar conexión con ${API_BASE_LABEL}. El sistema seguirá reintentándolo automáticamente en segundo plano.`
+                  ? `RADIA no permite consultas hasta confirmar conexión con ${API_BASE_LABEL}. Como el servicio es gratuito, tras un periodo de inactividad puede tardar unos 50 segundos en reactivarse. El sistema seguirá reintentándolo automáticamente en segundo plano.`
                   : 'Se está comprobando la API antes de habilitar consultas y visualizaciones. No es necesario refrescar la página.'}
               </p>
             </div>
