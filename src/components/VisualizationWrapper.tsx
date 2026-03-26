@@ -26,7 +26,7 @@ const API_RENDER_LABEL =
     : API_RENDER_URL;
 
 // Importamos el renderizador real
-import { DashboardRenderer } from './DashboardRenderer';
+import { VisualizationEngine } from '../VisualizationEngine';
 
 // --- INTERFACES DEL CONTRATO V2.0 ---
 interface VisualizationWrapperProps {
@@ -212,7 +212,7 @@ export const VisualizationWrapper: React.FC<VisualizationWrapperProps> = ({ data
                   overflow: 'hidden'
                 }}
               >
-                <DashboardRenderer payload={payload} />
+                <VisualizationEngine payload={payload} />
               </Paper>
 
               {/* 2. PETICIÓN + RESPUESTA API (lado a lado) */}

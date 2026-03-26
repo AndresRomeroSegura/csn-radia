@@ -56,16 +56,49 @@ interface VisualizationEngineProps {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const IMPORTANCIA_COLORS: Record<string, string> = {
-  Verde: '#16a34a',
+  Verde: '#80C342',
   Blanco: '#cbd5e1',
-  Amarillo: '#eab308',
-  Rojo: '#dc2626',
+  Amarillo: '#F7931D',
+  Rojo: '#ED1C24',
   // Fallbacks en inglés por si acaso
-  Green: '#16a34a',
+  Green: '#80C342',
   White: '#cbd5e1',
-  Yellow: '#eab308',
-  Red: '#dc2626',
+  Yellow: '#F7931D',
+  Red: '#ED1C24',
 };
+
+const IMPORTANCIA_LABELS: Record<string, string> = {
+  Verde: 'Muy baja',
+  Blanco: 'Baja a moderada',
+  Amarillo: 'Sustancial',
+  Rojo: 'Alta',
+  Green: 'Muy baja',
+  White: 'Baja a moderada',
+  Yellow: 'Sustancial',
+  Red: 'Alta',
+};
+
+function formatImportanceLabel(label: string): string {
+  return IMPORTANCIA_LABELS[label] ?? label;
+}
+
+function formatDimensionLabel(value: string): string {
+  if (/^\d{4}-\d{2}$/.test(value)) {
+    const date = new Date(`${value}-01T00:00:00Z`);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
+    }
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(value)) {
+    const date = new Date(value);
+    if (!Number.isNaN(date.getTime())) {
+      return date.toLocaleDateString('es-ES', { month: 'short', year: '2-digit' });
+    }
+  }
+
+  return value;
+}
 
 /** Genera una paleta armónica a partir del color primario cuando no hay semántica de colores */
 function generatePalette(primaryColor: string, count: number): string[] {
@@ -143,10 +176,11 @@ function buildChartOptions(
 
   // ── PIE / DONUT ────────────────────────────────────────────────────────────
   if (chart_type === 'pie' || chart_type === 'donut') {
-    const labels = data.map((row) => String(row[dimension] ?? ''));
+    const rawLabels = data.map((row) => String(row[dimension] ?? ''));
+    const labels = rawLabels.map((label) => formatImportanceLabel(label));
     const values = data.map((row) => Number(row[metrics[0]] ?? 0));
-    const colors = labels.map(
-      (label) => IMPORTANCIA_COLORS[label] ?? generatePalette(primaryColor, labels.length)[labels.indexOf(label)],
+    const colors = rawLabels.map(
+      (label) => IMPORTANCIA_COLORS[label] ?? generatePalette(primaryColor, rawLabels.length)[rawLabels.indexOf(label)],
     );
 
     return {
@@ -168,18 +202,18 @@ function buildChartOptions(
 
   // ── STACKED BAR (con group_by) ─────────────────────────────────────────────
   if (chart_type === 'stacked_bar' && group_by) {
-    const categories = [...new Set(data.map((row) => String(row[dimension] ?? '')))];
+    const categories = [...new Set(data.map((row) => formatDimensionLabel(String(row[dimension] ?? ''))))];
     const groups = [...new Set(data.map((row) => String(row[group_by] ?? '')))];
     const metric = metrics[0];
 
     const series = groups.map((group) => {
       const seriesData = categories.map((cat) => {
         const match = data.find(
-          (row) => String(row[dimension]) === cat && String(row[group_by]) === group,
+          (row) => formatDimensionLabel(String(row[dimension] ?? '')) === cat && String(row[group_by]) === group,
         );
         return Number(match?.[metric] ?? 0);
       });
-      return { name: group, data: seriesData };
+      return { name: formatImportanceLabel(group), data: seriesData };
     });
 
     const colors = groups.map(
@@ -206,7 +240,7 @@ function buildChartOptions(
   }
 
   // ── BAR / LINE (múltiples métricas o una sola) ─────────────────────────────
-  const categories = data.map((row) => String(row[dimension] ?? ''));
+  const categories = data.map((row) => formatDimensionLabel(String(row[dimension] ?? '')));
   const palette = generatePalette(primaryColor, metrics.length);
 
   const series = metrics.map((metric, idx) => ({
