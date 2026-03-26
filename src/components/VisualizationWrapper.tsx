@@ -91,6 +91,8 @@ export const VisualizationWrapper: React.FC<VisualizationWrapperProps> = ({ data
     setLoading(true);
     setPayload(null);
     setErrorConfig(false);
+    setTsxResponse(null);
+    setTsxError(false);
 
     // 1. Verificación
     if (!vizConfig || !vizConfig.mapping) {
@@ -262,7 +264,7 @@ export const VisualizationWrapper: React.FC<VisualizationWrapperProps> = ({ data
                   <Box sx={{ p: 2.5, overflowX: 'auto', maxHeight: '45vh', overflowY: 'auto' }}>
                     {tsxError ? (
                       <Typography variant="caption" sx={{ color: '#f87171', fontFamily: 'monospace' }}>
-                        API no disponible — inicia uvicorn en localhost:8000 para ver el TSX generado.
+                        API no disponible — inicia uvicorn en localhost:8002 para ver el TSX generado.
                       </Typography>
                     ) : tsxResponse ? (
                       <Typography component="pre" sx={{ color: '#e2e8f0', fontFamily: 'monospace', margin: 0, fontSize: '0.78rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>

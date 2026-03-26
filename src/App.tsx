@@ -24,6 +24,8 @@ interface Message {
   timestamp: string;
 }
 
+type ApiStatus = 'checking' | 'online' | 'offline';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Constantes
 // ─────────────────────────────────────────────────────────────────────────────
@@ -235,9 +237,11 @@ const IconChevron = ({ up }: { up: boolean }) => (
 interface HeaderProps {
   showActions?: boolean;
   onClear?: () => void;
+  onLogout?: () => void;
+  apiStatus?: ApiStatus;
 }
 
-function RadiaHeader({ showActions = false, onClear }: HeaderProps) {
+function RadiaHeader({ showActions = false, onClear, onLogout, apiStatus }: HeaderProps) {
   return (
     <header style={{
       height: 56,
@@ -290,6 +294,27 @@ function RadiaHeader({ showActions = false, onClear }: HeaderProps) {
 
       {/* ── Derecha: acciones + usuario ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        {/* Badge estado API */}
+        {apiStatus && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            padding: '3px 9px', borderRadius: 20, marginRight: 6,
+            background: apiStatus === 'online' ? '#f0fdf4' : apiStatus === 'offline' ? '#fef2f2' : '#fffbeb',
+            border: `1px solid ${apiStatus === 'online' ? '#bbf7d0' : apiStatus === 'offline' ? '#fecaca' : '#fde68a'}`,
+          }}>
+            <div style={{
+              width: 7, height: 7, borderRadius: '50%',
+              background: apiStatus === 'online' ? '#22c55e' : apiStatus === 'offline' ? '#ef4444' : '#f59e0b',
+              boxShadow: apiStatus === 'checking' ? '0 0 0 2px #fde68a' : undefined,
+            }} />
+            <span style={{
+              fontSize: 10, fontWeight: 600, letterSpacing: 0.3,
+              color: apiStatus === 'online' ? '#16a34a' : apiStatus === 'offline' ? '#dc2626' : '#b45309',
+            }}>
+              {apiStatus === 'online' ? 'API Online' : apiStatus === 'offline' ? 'API Offline' : 'Conectando…'}
+            </span>
+          </div>
+        )}
         {showActions && (
           <>
             <button
@@ -324,7 +349,7 @@ function RadiaHeader({ showActions = false, onClear }: HeaderProps) {
         }}>J</div>
 
         {/* Logout */}
-        <button style={{ ...hdrBtn, marginLeft: 2 }} title="Cerrar sesión"><IconLogout /></button>
+        <button style={{ ...hdrBtn, marginLeft: 2 }} title="Cerrar sesión" onClick={onLogout}><IconLogout /></button>
       </div>
     </header>
   );
@@ -442,6 +467,7 @@ export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() =>
     sessionStorage.getItem('radia_auth') === '1'
   );
+  const [apiStatus, setApiStatus] = useState<ApiStatus>('checking');
   const [view, setView] = useState<'chat' | 'dashboard'>('chat');
   const [messages, setMessages] = useState<Message[]>([]);
   const [activePayload, setActivePayload] = useState<ApiPayload | null>(null);
@@ -449,17 +475,62 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
-
-  if (!isAuthenticated) {
-    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
-  }
+  const isServiceReady = apiStatus === 'online';
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkServices = async () => {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 8000);
+
+      try {
+        const res = await fetch(`${API_BASE}/openapi.json`, {
+          method: 'GET',
+          cache: 'no-store',
+          signal: controller.signal,
+        });
+        if (!cancelled) {
+          setApiStatus(res.ok ? 'online' : 'offline');
+        }
+      } catch {
+        if (!cancelled) {
+          setApiStatus('offline');
+        }
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    };
+
+    checkServices();
+    const interval = window.setInterval(checkServices, 30000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(interval);
+    };
+  }, []);
+
+  function handleLogout() {
+    sessionStorage.removeItem('radia_auth');
+    setIsAuthenticated(false);
+    setView('chat');
+    setMessages([]);
+    setActivePayload(null);
+    setQuery('');
+    setExpandedId(null);
+  }
+
+  if (!isAuthenticated) {
+    return <LoginScreen onLogin={() => setIsAuthenticated(true)} />;
+  }
+
   async function submitQuery(q: string) {
-    if (!q.trim() || isLoading) return;
+    if (!q.trim() || isLoading || !isServiceReady) return;
     setMessages((p) => [...p, { id: uid(), type: 'user', text: q, timestamp: ts() }]);
     setQuery('');
     setIsLoading(true);
@@ -490,7 +561,7 @@ export default function App() {
   if (view === 'dashboard' && activePayload) {
     return (
       <div style={{ minHeight: '100vh', background: '#f5f6f8', fontFamily: "'IBM Plex Sans', 'Segoe UI', sans-serif" }}>
-        <RadiaHeader showActions={false} />
+        <RadiaHeader showActions={false} apiStatus={apiStatus} onLogout={handleLogout} />
         <VisualizationWrapper
           data={activePayload.data}
           userQuery={activePayload.original_query}
@@ -507,11 +578,37 @@ export default function App() {
       display: 'flex', flexDirection: 'column', height: '100vh',
       background: '#f5f6f8', fontFamily: "'IBM Plex Sans', 'Segoe UI', sans-serif",
     }}>
-      <RadiaHeader showActions onClear={() => setMessages([])} />
+      <RadiaHeader showActions onClear={() => setMessages([])} apiStatus={apiStatus} onLogout={handleLogout} />
 
       {/* Área de chat */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '28px 0 12px' }}>
         <div style={{ maxWidth: 860, margin: '0 auto', padding: '0 20px' }}>
+          {!isServiceReady && (
+            <div style={{
+              marginBottom: 20,
+              background: '#fff',
+              border: `1px solid ${apiStatus === 'offline' ? '#fecaca' : '#fde68a'}`,
+              borderRadius: 12,
+              padding: '16px 18px',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+            }}>
+              <div style={{
+                fontSize: 13,
+                fontWeight: 700,
+                color: apiStatus === 'offline' ? '#b91c1c' : '#92400e',
+                marginBottom: 6,
+              }}>
+                {apiStatus === 'offline'
+                  ? 'Servicios no disponibles'
+                  : 'Verificando disponibilidad de servicios'}
+              </div>
+              <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: '#475569' }}>
+                {apiStatus === 'offline'
+                  ? `RADIA no permite consultas hasta confirmar conexión con ${API_BASE}. Revisa Render y espera a que el servicio despierte.`
+                  : 'Se está comprobando la API antes de habilitar consultas y visualizaciones.'}
+              </p>
+            </div>
+          )}
 
           {/* Estado vacío */}
           {messages.length === 0 && (
@@ -533,13 +630,20 @@ export default function App() {
                     style={{
                       background: '#fff', border: '1px solid #e2e6eb',
                       borderRadius: 8, padding: '11px 18px',
-                      fontSize: 13, color: '#374151', cursor: 'pointer',
+                      fontSize: 13, color: '#374151',
+                      cursor: isServiceReady ? 'pointer' : 'not-allowed',
                       textAlign: 'left', fontFamily: 'inherit',
                       boxShadow: '0 1px 2px rgba(0,0,0,0.04)',
                       transition: 'border-color 0.15s, background 0.15s',
+                      opacity: isServiceReady ? 1 : 0.55,
                     }}
-                    onMouseEnter={(e) => { e.currentTarget.style.background = '#f0f4ff'; e.currentTarget.style.borderColor = '#003DA5'; }}
+                    onMouseEnter={(e) => {
+                      if (!isServiceReady) return;
+                      e.currentTarget.style.background = '#f0f4ff';
+                      e.currentTarget.style.borderColor = '#003DA5';
+                    }}
                     onMouseLeave={(e) => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.borderColor = '#e2e6eb'; }}
+                    disabled={!isServiceReady}
                   >
                     {q}
                   </button>
@@ -734,16 +838,16 @@ export default function App() {
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && submitQuery(query)}
             onFocus={(e) => { e.currentTarget.style.borderColor = '#003DA5'; e.currentTarget.style.background = '#fff'; }}
             onBlur={(e) => { e.currentTarget.style.borderColor = '#e2e6eb'; e.currentTarget.style.background = '#f9fafb'; }}
-            disabled={isLoading}
+            disabled={isLoading || !isServiceReady}
           />
           <button
             onClick={() => submitQuery(query)}
-            disabled={!query.trim() || isLoading}
+            disabled={!query.trim() || isLoading || !isServiceReady}
             style={{
               background: '#003DA5', color: '#fff', border: 'none',
               borderRadius: 10, padding: '12px 16px',
-              cursor: (!query.trim() || isLoading) ? 'not-allowed' : 'pointer',
-              opacity: (!query.trim() || isLoading) ? 0.45 : 1,
+              cursor: (!query.trim() || isLoading || !isServiceReady) ? 'not-allowed' : 'pointer',
+              opacity: (!query.trim() || isLoading || !isServiceReady) ? 0.45 : 1,
               display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
               transition: 'opacity 0.15s',
             }}
