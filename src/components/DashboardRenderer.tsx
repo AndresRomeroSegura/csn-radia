@@ -58,14 +58,13 @@ const CSN_COLORS = {
 };
 
 const GENERIC_PALETTE = [
-  CSN_COLORS.primary,
-  CSN_COLORS.secondary,
-  CSN_COLORS.accent,
-  '#6366f1',
-  '#10b981',
-  '#f59e0b',
-  '#8b5cf6',
-  '#06b6d4',
+  '#003DA5',
+  '#1A66D1',
+  '#002F7A',
+  '#4D88DB',
+  '#002764',
+  '#80AAE6',
+  '#B3CCF0',
 ];
 
 // Semántica de colores para el campo "importancia"

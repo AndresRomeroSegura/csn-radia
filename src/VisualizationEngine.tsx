@@ -82,6 +82,16 @@ function formatImportanceLabel(label: string): string {
   return IMPORTANCIA_LABELS[label] ?? label;
 }
 
+const CHART_COLORS = [
+  '#003DA5',
+  '#1A66D1',
+  '#002F7A',
+  '#4D88DB',
+  '#002764',
+  '#80AAE6',
+  '#B3CCF0',
+];
+
 function formatDimensionLabel(value: string): string {
   if (/^\d{4}-\d{2}$/.test(value)) {
     const date = new Date(`${value}-01T00:00:00Z`);
@@ -102,17 +112,9 @@ function formatDimensionLabel(value: string): string {
 
 /** Genera una paleta armónica a partir del color primario cuando no hay semántica de colores */
 function generatePalette(primaryColor: string, count: number): string[] {
-  // Paleta institucional derivada del azul CSN + colores complementarios
-  const basePalette = [
-    primaryColor,
-    '#0ea5e9',
-    '#6366f1',
-    '#10b981',
-    '#f59e0b',
-    '#ef4444',
-    '#8b5cf6',
-    '#06b6d4',
-  ];
+  const basePalette = primaryColor === CHART_COLORS[0]
+    ? CHART_COLORS
+    : [primaryColor, ...CHART_COLORS.filter((color) => color !== primaryColor)];
   return Array.from({ length: count }, (_, i) => basePalette[i % basePalette.length]);
 }
 
@@ -242,10 +244,10 @@ function buildChartOptions(
       },
       stroke: chart_type === 'line' ? { curve: 'straight', width: 2 } : { show: false },
       markers: chart_type === 'line'
-        ? { size: 5, strokeWidth: 0, colors: [primaryColor] }
+        ? { size: 5, strokeWidth: 0, colors: palette, strokeColors: palette }
         : {},
       dataLabels: { enabled: false },
-      fill: chart_type === 'line' ? { opacity: 0 } : { opacity: 1 },
+      fill: { opacity: 1 },
     },
   };
 }
