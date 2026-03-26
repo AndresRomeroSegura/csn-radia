@@ -360,7 +360,7 @@ function RadiaHeader({ showActions = false, onClear, onLogout, apiStatus }: Head
       {/* ── Derecha: acciones + usuario ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
         <a
-          href={API_BASE}
+          href="https://radia-api.onrender.com/docs"
           target="_blank"
           rel="noreferrer"
           style={{
@@ -377,7 +377,7 @@ function RadiaHeader({ showActions = false, onClear, onLogout, apiStatus }: Head
             textDecoration: 'none',
             letterSpacing: 0.2,
           }}
-          title={`Abrir API: ${API_BASE}`}
+          title="Abrir documentación de la API"
         >
           API
         </a>
