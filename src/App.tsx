@@ -152,6 +152,7 @@ const ts = () => new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minut
 const uid = () => Math.random().toString(36).slice(2);
 const IMPORTANCIA_LABEL_MAP: Record<string, string> = {
   Verde: 'Baja',
+  Blanco: 'Sin clasificar',
   Amarillo: 'Media',
   Rojo: 'Alta',
 };
