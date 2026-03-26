@@ -92,11 +92,12 @@ function formatImportanceLabel(label: string): string {
 
 const CHART_COLORS = [
   '#003DA5',
-  '#4D88DB',
-  '#002764',
-  '#80AAE6',
+  '#7FAAEF',
+  '#002E7A',
+  '#C2D6FA',
   '#001F52',
-  '#B3CCF0',
+  '#3A78E0',
+  '#0050D1',
 ];
 
 function formatDimensionLabel(value: string): string {
@@ -300,6 +301,7 @@ function validatePayload(payload: RenderPayload): string | null {
 
 export const VisualizationEngine: React.FC<VisualizationEngineProps> = ({ payload }) => {
   const [showGrid, setShowGrid] = useState(payload?.config?.styles?.show_grid ?? true);
+  const [activeCircularIndex, setActiveCircularIndex] = useState<number | undefined>(undefined);
 
   const validationError = useMemo(() => validatePayload(payload), [payload]);
 
@@ -451,23 +453,33 @@ export const VisualizationEngine: React.FC<VisualizationEngineProps> = ({ payloa
         {isCircularChart ? (
           <Box sx={{ width: '100%', height: 380 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <RePieChart>
+              <RePieChart margin={{ top: 12, right: 36, bottom: 12, left: 36 }}>
                 <RePie
                   data={circularData}
+                  onMouseEnter={(_, index) => setActiveCircularIndex(index)}
+                  onMouseLeave={() => setActiveCircularIndex(undefined)}
                   dataKey="value"
                   nameKey="name"
                   cx="50%"
                   cy="50%"
-                  outerRadius={150}
-                  innerRadius={config.chart_type === 'donut' ? 60 : 0}
+                  outerRadius={122}
+                  innerRadius={config.chart_type === 'donut' ? 54 : 0}
                   paddingAngle={config.chart_type === 'donut' ? 3 : 1}
                   label={({ payload: slicePayload, percent }) =>
                     `${slicePayload.displayName} (${((percent ?? 0) * 100).toFixed(0)}%)`
                   }
                   labelLine={true}
+                  stroke="#ffffff"
+                  strokeWidth={2}
                 >
                   {circularData.map((entry, index) => (
-                    <ReCell key={`cell-${index}`} fill={entry.color} />
+                    <ReCell
+                      key={`cell-${index}`}
+                      fill={entry.color}
+                      opacity={activeCircularIndex === undefined || activeCircularIndex === index ? 1 : 0.72}
+                      stroke="#ffffff"
+                      strokeWidth={activeCircularIndex === index ? 4 : 2}
+                    />
                   ))}
                 </RePie>
                 <ReTooltip
