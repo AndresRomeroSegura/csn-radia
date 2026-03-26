@@ -150,30 +150,6 @@ const HEALTHCHECK_QUERY = 'Muestra el número total de hallazgos registrados en 
 // ─────────────────────────────────────────────────────────────────────────────
 const ts = () => new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 const uid = () => Math.random().toString(36).slice(2);
-const IMPORTANCIA_LABEL_MAP: Record<string, string> = {
-  Verde: 'Muy baja',
-  Blanco: 'Baja a moderada',
-  Amarillo: 'Sustancial',
-  Rojo: 'Alta',
-};
-
-function formatDateValue(value: string): string {
-  if (!/^\d{4}-\d{2}-\d{2}/.test(value)) return value;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString('es-ES', { month: 'short', year: 'numeric' });
-}
-
-function formatDisplayValue(key: string, value: unknown): string {
-  const text = String(value ?? '');
-  if (key === 'importancia') {
-    return IMPORTANCIA_LABEL_MAP[text] ?? text;
-  }
-  if (typeof value === 'string') {
-    return formatDateValue(text);
-  }
-  return text;
-}
 
 function StatusSpinner() {
   return (
@@ -216,11 +192,7 @@ function StatusSpinner() {
 }
 
 function generateAIText(): string {
-  return (
-    `Se ha generado una respuesta estructurada a partir de los datos recuperados. ` +
-    `A continuación se muestra una vista representativa con la tabla de resultados y el cuadro de mandos asociado.\n\n` +
-    `Este texto es fijo y actúa únicamente como apoyo visual dentro de la demo. Los gráficos son el elemento que compete a este desarrollo, por lo que la respuesta textual se presenta solo como una parte representativa y no funcional.`
-  );
+  return 'Este texto es fijo y actúa únicamente como apoyo visual dentro de la demo. Los gráficos son el elemento que compete a este desarrollo, por lo que la respuesta textual se presenta solo como una parte representativa y no funcional.';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -782,42 +754,6 @@ export default function App() {
                           i % 2 === 1 ? <strong key={i}>{part}</strong> : <span key={i}>{part}</span>
                         )}
                       </p>
-
-                      {/* Tabla */}
-                      {msg.payload && (
-                        <div style={{ borderRadius: 6, overflow: 'hidden', border: '1px solid #e8ecf0', marginBottom: 16 }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                            <thead>
-                              <tr>
-                                {Object.keys(msg.payload.data[0] ?? {}).map((col) => (
-                                  <th key={col} style={{
-                                    background: '#003DA5', color: '#fff',
-                                    padding: '9px 14px', textAlign: 'left',
-                                    fontWeight: 600, fontSize: 12, letterSpacing: 0.2,
-                                  }}>
-                                    {col.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-                                  </th>
-                                ))}
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {msg.payload.data.map((row, i) => (
-                                <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f8f9fb' }}>
-                                  {Object.entries(row).map(([key, val], j) => (
-                                    <td key={j} style={{
-                                      padding: '8px 14px',
-                                      borderBottom: '1px solid #f0f2f5',
-                                      color: '#374151', fontSize: 13,
-                                    }}>
-                                      {formatDisplayValue(key, val)}
-                                    </td>
-                                  ))}
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
 
                       {/* Botones */}
                       {msg.payload && (
