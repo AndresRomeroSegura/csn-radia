@@ -150,6 +150,19 @@ const HEALTHCHECK_QUERY = 'Muestra el número total de hallazgos registrados en 
 // ─────────────────────────────────────────────────────────────────────────────
 const ts = () => new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 const uid = () => Math.random().toString(36).slice(2);
+const IMPORTANCIA_LABEL_MAP: Record<string, string> = {
+  Verde: 'Baja',
+  Amarillo: 'Media',
+  Rojo: 'Alta',
+};
+
+function formatDisplayValue(key: string, value: unknown): string {
+  const text = String(value ?? '');
+  if (key === 'importancia') {
+    return IMPORTANCIA_LABEL_MAP[text] ?? text;
+  }
+  return text;
+}
 
 function StatusSpinner() {
   return (
@@ -206,7 +219,7 @@ function generateAIText(payload: ApiPayload): string {
     `En resumen, el total de ${metricKey.replace(/_/g, ' ')} registrados en todas las instalaciones es **${total}**. ` +
     `El promedio de ${metricKey.replace(/_/g, ' ')} por instalación es de **${avg}**, ` +
     `con un mínimo de **0** y un máximo de **${max}** hallazgos` +
-    (maxRow ? ` en ${maxRow[dimension]}` : '') + `.`
+    (maxRow ? ` en ${formatDisplayValue(dimension, maxRow[dimension])}` : '') + `.`
   );
 }
 
@@ -784,13 +797,13 @@ export default function App() {
                             <tbody>
                               {msg.payload.data.map((row, i) => (
                                 <tr key={i} style={{ background: i % 2 === 0 ? '#fff' : '#f8f9fb' }}>
-                                  {Object.values(row).map((val, j) => (
+                                  {Object.entries(row).map(([key, val], j) => (
                                     <td key={j} style={{
                                       padding: '8px 14px',
                                       borderBottom: '1px solid #f0f2f5',
                                       color: '#374151', fontSize: 13,
                                     }}>
-                                      {String(val)}
+                                      {formatDisplayValue(key, val)}
                                     </td>
                                   ))}
                                 </tr>
