@@ -16,16 +16,15 @@ Swagger UI: http://localhost:8002/docs
 
 | Método | Ruta | Descripción |
 |--------|------|-------------|
-| `GET` | `/` | Info de la API |
-| `GET` | `/charts` | Lista todos los ejemplos disponibles |
-| `GET` | `/charts/{chart_type}` | Payload completo por tipo (`bar`, `line`, `pie`, `donut`, `stacked_bar`) |
 | `POST` | `/query` | Consulta en lenguaje natural → payload de gráfico |
+| `POST` | `/render` | Payload v2.0 → componente TSX (`RADIAChart.tsx`) |
 
 ## Arrancar el proyecto completo
 
 **Terminal 1 — API:**
 ```bash
-cd api && uvicorn main:app --reload --port 8002
+cd api
+uvicorn main:app --reload --port 8002
 ```
 
 **Terminal 2 — Frontend React:**
@@ -33,5 +32,5 @@ cd api && uvicorn main:app --reload --port 8002
 npm run dev
 ```
 
-El frontend estará en http://localhost:5173 y llamará automáticamente a la API en http://localhost:8000.
-Si la API no está disponible, el frontend usa datos de fallback locales.
+El frontend estará en http://localhost:5173 y llamará automáticamente a la API en http://localhost:8002.
+El frontend no habilita el sistema hasta confirmar que `POST /query` y `POST /render` están disponibles.

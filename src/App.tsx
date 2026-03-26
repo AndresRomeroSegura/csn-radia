@@ -134,6 +134,8 @@ const LOCAL_FALLBACK: Record<string, ApiPayload> = {
   },
 };
 
+const HEALTHCHECK_QUERY = 'Muestra el número total de hallazgos registrados en cada instalación';
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -485,17 +487,36 @@ export default function App() {
     let cancelled = false;
 
     const checkServices = async () => {
-      const controller = new AbortController();
-      const timeout = window.setTimeout(() => controller.abort(), 8000);
+      const queryController = new AbortController();
+      const renderController = new AbortController();
+      const timeout = window.setTimeout(() => {
+        queryController.abort();
+        renderController.abort();
+      }, 8000);
 
       try {
-        const res = await fetch(`${API_BASE}/openapi.json`, {
-          method: 'GET',
+        const queryRes = await fetch(`${API_BASE}/query`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ query: HEALTHCHECK_QUERY }),
           cache: 'no-store',
-          signal: controller.signal,
+          signal: queryController.signal,
         });
+        if (!queryRes.ok) throw new Error('query_unavailable');
+
+        await queryRes.json() as ApiPayload;
+
+        const renderRes = await fetch(`${API_BASE}/render`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(LOCAL_FALLBACK.bar),
+          cache: 'no-store',
+          signal: renderController.signal,
+        });
+        if (!renderRes.ok) throw new Error('render_unavailable');
+
         if (!cancelled) {
-          setApiStatus(res.ok ? 'online' : 'offline');
+          setApiStatus('online');
         }
       } catch {
         if (!cancelled) {
@@ -535,7 +556,6 @@ export default function App() {
     setQuery('');
     setIsLoading(true);
 
-    let payload: ApiPayload;
     try {
       const res = await fetch(`${API_BASE}/query`, {
         method: 'POST',
@@ -543,18 +563,22 @@ export default function App() {
         body: JSON.stringify({ query: q }),
       });
       if (!res.ok) throw new Error();
-      payload = await res.json();
+      const payload: ApiPayload = await res.json();
+      setMessages((p) => [...p, { id: uid(), type: 'ai', text: generateAIText(payload), payload, timestamp: ts() }]);
     } catch {
-      const ql = q.toLowerCase();
-      if (ql.includes('donut') || ql.includes('anillo')) payload = { ...LOCAL_FALLBACK.donut, original_query: q };
-      else if (ql.includes('circular') || (ql.includes('distribuc') && ql.includes('instalac'))) payload = { ...LOCAL_FALLBACK.pie, original_query: q };
-      else if (ql.includes('apilad') || ql.includes('desglose') || ql.includes('año')) payload = { ...LOCAL_FALLBACK.stacked_bar, original_query: q };
-      else if (ql.includes('mensual') || ql.includes('evoluc') || ql.includes('tiempo')) payload = { ...LOCAL_FALLBACK.line, original_query: q };
-      else payload = { ...LOCAL_FALLBACK.bar, original_query: q };
+      setApiStatus('offline');
+      setMessages((p) => [
+        ...p,
+        {
+          id: uid(),
+          type: 'ai',
+          text: `No se pudo completar la consulta porque alguno de los servicios de RADIA dejó de estar disponible. Revise ${API_BASE} y vuelva a intentarlo.`,
+          timestamp: ts(),
+        },
+      ]);
+    } finally {
+      setIsLoading(false);
     }
-
-    setMessages((p) => [...p, { id: uid(), type: 'ai', text: generateAIText(payload), payload, timestamp: ts() }]);
-    setIsLoading(false);
   }
 
   // ── Vista: Cuadro de Mandos ────────────────────────────────────────────────

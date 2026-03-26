@@ -20,7 +20,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import PlainTextResponse
 
-from models import RenderPayload
+from models import RenderPayload, QueryRequest
 
 # ─────────────────────────────────────────────────────────────────────────────
 # App
@@ -103,6 +103,105 @@ GENERIC_PALETTE: list[str] = [
     "#8b5cf6",
 ]
 
+EXAMPLE_PAYLOADS: dict[str, dict] = {
+    "bar": {
+        "request_id": "ff5c93ca-0c94-4494-ab1f-b9462d31ac9c",
+        "original_query": "Muestra el número total de hallazgos registrados en cada instalación",
+        "data": [
+            {"instalacion": "Almaraz I", "total_hallazgos": 2},
+            {"instalacion": "Vandellós II", "total_hallazgos": 2},
+            {"instalacion": "Almaraz II", "total_hallazgos": 1},
+            {"instalacion": "Ascó I", "total_hallazgos": 4},
+            {"instalacion": "Ascó II", "total_hallazgos": 0},
+            {"instalacion": "Cofrentes", "total_hallazgos": 2},
+            {"instalacion": "Trillo", "total_hallazgos": 0},
+        ],
+        "config": {
+            "title": "Número total de hallazgos por instalación",
+            "chart_type": "bar",
+            "mapping": {"dimension": "instalacion", "metrics": ["total_hallazgos"]},
+            "styles": {"primary_color": "#003DA5", "show_grid": True, "export_enabled": True},
+        },
+    },
+    "line": {
+        "request_id": "814cff48-802f-4d45-a951-799e06c74734",
+        "original_query": "Muestra la evolución mensual del número total de hallazgos detectados en todas las instalaciones a lo largo del tiempo",
+        "data": [
+            {"mes": "2024-03-01T00:00:00+00:00", "total_hallazgos": 2},
+            {"mes": "2024-08-01T00:00:00+00:00", "total_hallazgos": 2},
+            {"mes": "2024-09-01T00:00:00+00:00", "total_hallazgos": 1},
+            {"mes": "2025-02-01T00:00:00+00:00", "total_hallazgos": 2},
+            {"mes": "2026-01-01T00:00:00+00:00", "total_hallazgos": 1},
+            {"mes": "2026-02-01T00:00:00+00:00", "total_hallazgos": 2},
+            {"mes": "2026-03-01T00:00:00+00:00", "total_hallazgos": 1},
+        ],
+        "config": {
+            "title": "Evolución Mensual de Hallazgos",
+            "chart_type": "line",
+            "mapping": {"dimension": "mes", "metrics": ["total_hallazgos"]},
+            "styles": {"primary_color": "#003DA5", "show_grid": True, "export_enabled": True},
+        },
+    },
+    "pie": {
+        "request_id": "4658b4b0-f994-4138-bef8-a5aad85a5b06",
+        "original_query": "Muestra la distribución del número total de inspecciones realizadas agrupadas por cada instalación. Represéntalo visualmente como un gráfico circular",
+        "data": [
+            {"instalacion": "Almaraz I", "total_inspecciones": 2},
+            {"instalacion": "Vandellós II", "total_inspecciones": 2},
+            {"instalacion": "Almaraz II", "total_inspecciones": 2},
+            {"instalacion": "Ascó I", "total_inspecciones": 2},
+            {"instalacion": "Ascó II", "total_inspecciones": 1},
+            {"instalacion": "Cofrentes", "total_inspecciones": 3},
+            {"instalacion": "Trillo", "total_inspecciones": 3},
+        ],
+        "config": {
+            "title": "Distribución de Inspecciones por Instalación",
+            "chart_type": "pie",
+            "mapping": {"dimension": "instalacion", "metrics": ["total_inspecciones"]},
+            "styles": {"primary_color": "#003DA5", "show_grid": True, "export_enabled": True},
+        },
+    },
+    "donut": {
+        "request_id": "d3a9f712-1b2c-4e5f-8a7b-0c1d2e3f4a5b",
+        "original_query": "Distribución de hallazgos por nivel de importancia en formato donut",
+        "data": [
+            {"importancia": "Verde", "total_hallazgos": 17},
+            {"importancia": "Blanco", "total_hallazgos": 8},
+            {"importancia": "Amarillo", "total_hallazgos": 4},
+            {"importancia": "Rojo", "total_hallazgos": 1},
+        ],
+        "config": {
+            "title": "Distribución de Hallazgos por Importancia",
+            "chart_type": "donut",
+            "mapping": {"dimension": "importancia", "metrics": ["total_hallazgos"]},
+            "styles": {"primary_color": "#003DA5", "show_grid": False, "export_enabled": True},
+        },
+    },
+    "stacked_bar": {
+        "request_id": "2810f88e-4bdc-42f3-8412-c979fc80a63e",
+        "original_query": "Muestra el número total de hallazgos por instalación y desglose interno por año de inspección. Muestra solo las instalaciones que tengan algún hallazgo",
+        "data": [
+            {"instalacion": "Cofrentes", "anio": 2026, "total_hallazgos": 1},
+            {"instalacion": "Ascó I", "anio": 2024, "total_hallazgos": 2},
+            {"instalacion": "Cofrentes", "anio": 2024, "total_hallazgos": 1},
+            {"instalacion": "Ascó I", "anio": 2026, "total_hallazgos": 2},
+            {"instalacion": "Vandellós II", "anio": 2025, "total_hallazgos": 2},
+            {"instalacion": "Almaraz I", "anio": 2024, "total_hallazgos": 2},
+            {"instalacion": "Almaraz II", "anio": 2026, "total_hallazgos": 1},
+        ],
+        "config": {
+            "title": "Número total de hallazgos por instalación y año",
+            "chart_type": "stacked_bar",
+            "mapping": {
+                "dimension": "anio",
+                "metrics": ["total_hallazgos"],
+                "group_by": "instalacion",
+            },
+            "styles": {"primary_color": "#003DA5", "show_grid": True, "export_enabled": True},
+        },
+    },
+}
+
 
 def resolve_color(label: str, index: int) -> str:
     """Devuelve el color semántico si el label lo tiene, o uno de la paleta genérica."""
@@ -112,6 +211,26 @@ def resolve_color(label: str, index: int) -> str:
 def fmt(name: str) -> str:
     """Convierte snake_case a Title Case. Ej: 'total_hallazgos' → 'Total Hallazgos'."""
     return " ".join(w.capitalize() for w in name.split("_"))
+
+
+def infer_payload_from_query(query: str) -> dict:
+    """Devuelve uno de los payloads de ejemplo en función de la consulta."""
+    q = query.lower()
+    if "donut" in q or "anillo" in q:
+        key = "donut"
+    elif "circular" in q or ("distribuc" in q and "instalac" in q):
+        key = "pie"
+    elif "apilad" in q or "desglose" in q or "año" in q or "anio" in q:
+        key = "stacked_bar"
+    elif "mensual" in q or "evoluc" in q or "tiempo" in q:
+        key = "line"
+    else:
+        key = "bar"
+
+    payload = json.loads(json.dumps(EXAMPLE_PAYLOADS[key], ensure_ascii=False))
+    payload["request_id"] = str(uuid.uuid4())
+    payload["original_query"] = query
+    return payload
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -287,7 +406,7 @@ export default RADIAChart;
             f'          <Cell key="cell-{i}" fill="{resolve_color(row["name"], i)}" />'
             for i, row in enumerate(pie_data)
         )
-        donut_note = "// Nota: innerRadius={80} genera el hueco central del donut." if ctype == "donut" else ""
+        donut_note = "// Nota: innerRadius={60} genera el hueco central del donut." if ctype == "donut" else ""
         return f"""\
 import React from 'react';
 import {{
@@ -422,7 +541,7 @@ y devuelve el **código TSX del componente React** listo para incrustar en el si
 | `bar` | `<BarChart>` | Soporta múltiples métricas en paralelo |
 | `line` | `<LineChart>` | Formatea automáticamente fechas ISO → `"mar 24"` |
 | `pie` | `<PieChart>` | Colores semánticos para el campo `importancia` |
-| `donut` | `<PieChart>` | Igual que `pie` con `innerRadius={80}` |
+| `donut` | `<PieChart>` | Igual que `pie` con `innerRadius={60}` |
 | `stacked_bar` | `<BarChart stacked>` | Pivota automáticamente los datos SQL de long-format a wide-format |
 
 ---
@@ -576,6 +695,25 @@ El componente exportado se llama siempre `RADIAChart` (named export + default ex
 ```
 </details>
 """
+
+QUERY_DESCRIPTION = """
+Recibe una consulta en lenguaje natural y devuelve uno de los payloads v2.0
+de ejemplo alineados con las especificaciones del cliente para `bar`, `line`,
+`pie`, `donut` y `stacked_bar`.
+
+Este endpoint sirve como backend de demostración para el chat de RADIA y como
+healthcheck funcional del servicio antes de habilitar el sistema en frontend.
+"""
+
+
+@app.post(
+    "/query",
+    summary="Convierte una consulta natural en un payload de gráfico v2.0",
+    description=QUERY_DESCRIPTION,
+    response_model=RenderPayload,
+)
+def query(request: QueryRequest) -> RenderPayload:
+    return RenderPayload(**infer_payload_from_query(request.query))
 
 
 @app.post(

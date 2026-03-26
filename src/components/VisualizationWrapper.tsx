@@ -210,7 +210,7 @@ export const VisualizationWrapper: React.FC<VisualizationWrapperProps> = ({ data
                 Referencia Técnica — Contrato API
               </Typography>
 
-              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
 
                 {/* ── IZQUIERDA: Petición (Request) ── */}
                 <Paper elevation={0} sx={{ borderRadius: 3, border: '1px solid #334155', bgcolor: '#0f172a', overflow: 'hidden' }}>
