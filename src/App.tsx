@@ -215,7 +215,7 @@ function StatusSpinner() {
   );
 }
 
-function generateAIText(payload: ApiPayload): string {
+function generateAIText(): string {
   return (
     `Se ha generado una respuesta estructurada a partir de los datos recuperados. ` +
     `A continuación se muestra una vista representativa con la tabla de resultados y el cuadro de mandos asociado.\n\n` +
@@ -634,7 +634,7 @@ export default function App() {
       });
       if (!res.ok) throw new Error();
       const payload: ApiPayload = await res.json();
-      setMessages((p) => [...p, { id: uid(), type: 'ai', text: generateAIText(payload), payload, timestamp: ts() }]);
+      setMessages((p) => [...p, { id: uid(), type: 'ai', text: generateAIText(), payload, timestamp: ts() }]);
     } catch {
       setApiStatus('offline');
       setMessages((p) => [
