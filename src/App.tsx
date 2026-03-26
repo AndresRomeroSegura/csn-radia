@@ -29,7 +29,16 @@ type ApiStatus = 'checking' | 'online' | 'offline';
 // ─────────────────────────────────────────────────────────────────────────────
 // Constantes
 // ─────────────────────────────────────────────────────────────────────────────
-const API_BASE = import.meta.env.VITE_API_BASE ?? 'http://localhost:8002';
+const DEFAULT_LOCAL_API_BASE = 'http://localhost:8002';
+const DEFAULT_CLOUD_API_BASE = 'https://radia-api.onrender.com';
+const API_BASE = import.meta.env.VITE_API_BASE
+  ?? (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? DEFAULT_CLOUD_API_BASE
+    : DEFAULT_LOCAL_API_BASE);
+const API_BASE_LABEL =
+  typeof window !== 'undefined' && window.location.hostname !== 'localhost' && API_BASE.includes('localhost')
+    ? 'el backend desplegado de RADIA'
+    : API_BASE;
 
 const PRESET_QUERIES = [
   'Muestra el número total de hallazgos registrados en cada instalación',
@@ -141,6 +150,46 @@ const HEALTHCHECK_QUERY = 'Muestra el número total de hallazgos registrados en 
 // ─────────────────────────────────────────────────────────────────────────────
 const ts = () => new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 const uid = () => Math.random().toString(36).slice(2);
+
+function StatusSpinner() {
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+      <style>{`
+        @keyframes radia-spin {
+          to { transform: rotate(360deg); }
+        }
+        @keyframes radia-pulse {
+          0%, 80%, 100% { opacity: 0.25; transform: scale(0.8); }
+          40% { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+      <div style={{
+        width: 18,
+        height: 18,
+        borderRadius: '50%',
+        border: '2px solid #cbd5e1',
+        borderTopColor: '#003DA5',
+        animation: 'radia-spin 0.8s linear infinite',
+        flexShrink: 0,
+      }} />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            style={{
+              width: 6,
+              height: 6,
+              borderRadius: '50%',
+              background: '#003DA5',
+              display: 'block',
+              animation: `radia-pulse 1.2s ease-in-out ${i * 0.18}s infinite`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function generateAIText(payload: ApiPayload): string {
   const { data, config } = payload;
@@ -528,13 +577,15 @@ export default function App() {
     };
 
     checkServices();
-    const interval = window.setInterval(checkServices, 30000);
+    const interval = window.setInterval(checkServices, apiStatus === 'online' ? 30000 : 5000);
+    window.addEventListener('focus', checkServices);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      window.removeEventListener('focus', checkServices);
     };
-  }, []);
+  }, [apiStatus]);
 
   function handleLogout() {
     sessionStorage.removeItem('radia_auth');
@@ -572,7 +623,7 @@ export default function App() {
         {
           id: uid(),
           type: 'ai',
-          text: `No se pudo completar la consulta porque alguno de los servicios de RADIA dejó de estar disponible. Revise ${API_BASE} y vuelva a intentarlo.`,
+          text: `No se pudo completar la consulta porque alguno de los servicios de RADIA dejó de estar disponible. Se seguirá reintentando automáticamente contra ${API_BASE_LABEL}.`,
           timestamp: ts(),
         },
       ]);
@@ -622,14 +673,15 @@ export default function App() {
                 color: apiStatus === 'offline' ? '#b91c1c' : '#92400e',
                 marginBottom: 6,
               }}>
+                <StatusSpinner />
                 {apiStatus === 'offline'
                   ? 'Servicios no disponibles'
                   : 'Verificando disponibilidad de servicios'}
               </div>
               <p style={{ margin: 0, fontSize: 13, lineHeight: 1.55, color: '#475569' }}>
                 {apiStatus === 'offline'
-                  ? `RADIA no permite consultas hasta confirmar conexión con ${API_BASE}. Revisa Render y espera a que el servicio despierte.`
-                  : 'Se está comprobando la API antes de habilitar consultas y visualizaciones.'}
+                  ? `RADIA no permite consultas hasta confirmar conexión con ${API_BASE_LABEL}. El sistema seguirá reintentándolo automáticamente en segundo plano.`
+                  : 'Se está comprobando la API antes de habilitar consultas y visualizaciones. No es necesario refrescar la página.'}
               </p>
             </div>
           )}

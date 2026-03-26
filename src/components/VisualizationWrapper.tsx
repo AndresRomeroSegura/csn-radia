@@ -13,7 +13,17 @@ import {
 } from '@mui/material';
 import { Close, BarChart, Api, Analytics, Warning, ContentCopy, Check } from '@mui/icons-material';
 
-const API_RENDER_URL = `${import.meta.env.VITE_API_BASE ?? 'http://localhost:8002'}/render`;
+const DEFAULT_LOCAL_API_BASE = 'http://localhost:8002';
+const DEFAULT_CLOUD_API_BASE = 'https://radia-api.onrender.com';
+const API_BASE = import.meta.env.VITE_API_BASE
+  ?? (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
+    ? DEFAULT_CLOUD_API_BASE
+    : DEFAULT_LOCAL_API_BASE);
+const API_RENDER_URL = `${API_BASE}/render`;
+const API_RENDER_LABEL =
+  typeof window !== 'undefined' && window.location.hostname !== 'localhost' && API_RENDER_URL.includes('localhost')
+    ? 'el servicio de render desplegado'
+    : API_RENDER_URL;
 
 // Importamos el renderizador real
 import { DashboardRenderer } from './DashboardRenderer';
@@ -264,7 +274,7 @@ export const VisualizationWrapper: React.FC<VisualizationWrapperProps> = ({ data
                   <Box sx={{ p: 2.5, overflowX: 'auto', maxHeight: '45vh', overflowY: 'auto' }}>
                     {tsxError ? (
                       <Typography variant="caption" sx={{ color: '#f87171', fontFamily: 'monospace' }}>
-                        API no disponible — inicia uvicorn en localhost:8002 para ver el TSX generado.
+                        API no disponible — no se pudo contactar con {API_RENDER_LABEL}.
                       </Typography>
                     ) : tsxResponse ? (
                       <Typography component="pre" sx={{ color: '#e2e8f0', fontFamily: 'monospace', margin: 0, fontSize: '0.78rem', lineHeight: 1.6, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
