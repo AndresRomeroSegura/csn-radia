@@ -80,9 +80,9 @@ const formatMetricName = (name: string) =>
   name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
 const IMPORTANCIA_LABEL_MAP: Record<string, string> = {
-  Verde: 'Baja',
-  Blanco: 'Sin clasificar',
-  Amarillo: 'Media',
+  Verde: 'Muy baja',
+  Blanco: 'Baja a moderada',
+  Amarillo: 'Sustancial',
   Rojo: 'Alta',
 };
 

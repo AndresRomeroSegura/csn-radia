@@ -151,9 +151,9 @@ const HEALTHCHECK_QUERY = 'Muestra el número total de hallazgos registrados en 
 const ts = () => new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
 const uid = () => Math.random().toString(36).slice(2);
 const IMPORTANCIA_LABEL_MAP: Record<string, string> = {
-  Verde: 'Baja',
-  Blanco: 'Sin clasificar',
-  Amarillo: 'Media',
+  Verde: 'Muy baja',
+  Blanco: 'Baja a moderada',
+  Amarillo: 'Sustancial',
   Rojo: 'Alta',
 };
 
@@ -216,21 +216,10 @@ function StatusSpinner() {
 }
 
 function generateAIText(payload: ApiPayload): string {
-  const { data, config } = payload;
-  const { dimension, metrics } = config.mapping;
-  const count = data.length;
-  const metricKey = metrics[0];
-  const total = data.reduce((s, r) => s + Number(r[metricKey] ?? 0), 0);
-  const avg = count > 0 ? (total / count).toFixed(2) : '0';
-  const max = Math.max(...data.map((r) => Number(r[metricKey] ?? 0)));
-  const maxRow = data.find((r) => Number(r[metricKey]) === max);
   return (
-    `Se han encontrado ${count} registros correspondientes a diferentes ${dimension}s. ` +
-    `A continuación, se presenta el número total de ${metricKey.replace(/_/g, ' ')} registrados en cada una:\n\n` +
-    `En resumen, el total de ${metricKey.replace(/_/g, ' ')} registrados en todas las instalaciones es **${total}**. ` +
-    `El promedio de ${metricKey.replace(/_/g, ' ')} por instalación es de **${avg}**, ` +
-    `con un mínimo de **0** y un máximo de **${max}** hallazgos` +
-    (maxRow ? ` en ${formatDisplayValue(dimension, maxRow[dimension])}` : '') + `.`
+    `Se ha generado una respuesta estructurada a partir de los datos recuperados. ` +
+    `A continuación se muestra una vista representativa con la tabla de resultados y el cuadro de mandos asociado.\n\n` +
+    `Este texto es fijo y actúa únicamente como apoyo visual dentro de la demo. Los gráficos son el elemento que compete a este desarrollo, por lo que la respuesta textual se presenta solo como una parte representativa y no funcional.`
   );
 }
 
