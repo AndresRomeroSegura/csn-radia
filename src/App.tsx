@@ -358,6 +358,28 @@ function RadiaHeader({ showActions = false, onClear, onLogout, apiStatus }: Head
 
       {/* ── Derecha: acciones + usuario ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+        <a
+          href={API_BASE}
+          target="_blank"
+          rel="noreferrer"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            padding: '5px 10px',
+            marginRight: 6,
+            borderRadius: 999,
+            border: '1px solid #cbd5e1',
+            background: '#fff',
+            color: '#475569',
+            fontSize: 11,
+            fontWeight: 600,
+            textDecoration: 'none',
+            letterSpacing: 0.2,
+          }}
+          title={`Abrir API: ${API_BASE}`}
+        >
+          API
+        </a>
         {/* Badge estado API */}
         {apiStatus && (
           <div style={{
