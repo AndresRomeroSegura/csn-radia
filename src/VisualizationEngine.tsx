@@ -148,30 +148,20 @@ function buildChartOptions(
   const baseOptions: ApexOptions = {
     chart: {
       toolbar: { show: false },
-      fontFamily: "'IBM Plex Sans', 'Segoe UI', sans-serif",
       background: 'transparent',
-      animations: { enabled: true, speed: 600 },
-    },
-    title: {
-      text: undefined, // Lo renderizamos nosotros fuera del canvas
+      animations: { enabled: false },
     },
     tooltip: {
-      theme: 'dark',
-      style: { fontFamily: "'IBM Plex Sans', sans-serif" },
+      theme: 'light',
     },
     legend: {
       show: true,
       position: 'bottom',
-      fontFamily: "'IBM Plex Sans', sans-serif",
-      fontSize: '12px',
-      labels: { colors: '#64748b' },
     },
     grid: {
       show: showGrid,
       borderColor: '#e2e8f0',
-      strokeDashArray: 4,
     },
-    theme: { mode: 'light' },
   };
 
   // ── PIE / DONUT ────────────────────────────────────────────────────────────
@@ -190,12 +180,7 @@ function buildChartOptions(
         chart: { ...baseOptions.chart, type: chart_type === 'donut' ? 'donut' : 'pie' },
         labels,
         colors,
-        plotOptions: {
-          pie: {
-            donut: { size: '60%', labels: { show: true, total: { show: true, label: 'Total', color: '#475569' } } },
-          },
-        },
-        dataLabels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", fontSize: '12px' } },
+        dataLabels: { enabled: false },
       },
     };
   }
@@ -226,14 +211,8 @@ function buildChartOptions(
         ...baseOptions,
         chart: { ...baseOptions.chart, type: 'bar', stacked: true },
         colors,
-        xaxis: {
-          categories,
-          labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
-        },
-        yaxis: {
-          labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
-        },
-        plotOptions: { bar: { horizontal: false, borderRadius: 3, columnWidth: '55%' } },
+        xaxis: { categories },
+        plotOptions: { bar: { horizontal: false } },
         dataLabels: { enabled: false },
       },
     };
@@ -257,22 +236,16 @@ function buildChartOptions(
       ...baseOptions,
       chart: { ...baseOptions.chart, type: apexType },
       colors: palette,
-      xaxis: {
-        categories,
-        labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
-        axisBorder: { color: '#e2e8f0' },
-        axisTicks: { color: '#e2e8f0' },
-      },
-      yaxis: {
-        labels: { style: { fontFamily: "'IBM Plex Sans', sans-serif", colors: '#475569' } },
-      },
+      xaxis: { categories },
       plotOptions: {
-        bar: { horizontal: false, borderRadius: 4, columnWidth: metrics.length > 1 ? '60%' : '40%' },
+        bar: { horizontal: false },
       },
-      stroke: chart_type === 'line' ? { curve: 'smooth', width: 3 } : { show: false },
-      markers: chart_type === 'line' ? { size: 5, strokeWidth: 0 } : {},
+      stroke: chart_type === 'line' ? { curve: 'straight', width: 2 } : { show: false },
+      markers: chart_type === 'line'
+        ? { size: 5, strokeWidth: 0, colors: [primaryColor] }
+        : {},
       dataLabels: { enabled: false },
-      fill: chart_type === 'line' ? { type: 'gradient', gradient: { shade: 'light', type: 'vertical', opacityFrom: 0.4, opacityTo: 0 } } : { opacity: 1 },
+      fill: chart_type === 'line' ? { opacity: 0 } : { opacity: 1 },
     },
   };
 }
