@@ -79,6 +79,16 @@ const IMPORTANCIA_COLOR_MAP: Record<string, string> = {
 const formatMetricName = (name: string) =>
   name.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
+const IMPORTANCIA_LABEL_MAP: Record<string, string> = {
+  Verde: 'Baja',
+  Amarillo: 'Media',
+  Rojo: 'Alta',
+};
+
+function formatSeriesLabel(label: string): string {
+  return IMPORTANCIA_LABEL_MAP[label] ?? label;
+}
+
 // Formatea valores de dimensión que sean fechas ISO a "MMM YY"
 function formatDimension(value: string): string {
   if (typeof value === 'string' && value.match(/^\d{4}-\d{2}-\d{2}/)) {
@@ -152,9 +162,10 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
             <YAxis tick={{ fill: CSN_COLORS.grey }} />
             <Tooltip
               cursor={{ fill: 'rgba(0, 61, 165, 0.05)' }}
+              formatter={(value, name) => [value, formatSeriesLabel(String(name))]}
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
             />
-            <Legend formatter={formatMetricName} />
+            <Legend formatter={(value) => formatSeriesLabel(formatMetricName(String(value)))} />
             {mapping.metrics.map((metricKey, index) => (
               <Bar
                 key={metricKey}
@@ -185,9 +196,10 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
             <YAxis tick={{ fill: CSN_COLORS.grey }} />
             <Tooltip
               labelFormatter={(label) => formatDimension(String(label))}
+              formatter={(value, name) => [value, formatSeriesLabel(String(name))]}
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
             />
-            <Legend formatter={formatMetricName} />
+            <Legend formatter={(value) => formatSeriesLabel(formatMetricName(String(value)))} />
             {mapping.metrics.map((metricKey, index) => (
               <Line
                 key={metricKey}
@@ -215,13 +227,15 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
             <XAxis dataKey={mapping.dimension} tick={{ fill: CSN_COLORS.grey }} />
             <YAxis tick={{ fill: CSN_COLORS.grey }} />
             <Tooltip
+              formatter={(value, name) => [value, formatSeriesLabel(String(name))]}
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
             />
-            <Legend />
+            <Legend formatter={(value) => formatSeriesLabel(String(value))} />
             {groups.map((group, index) => (
               <Bar
                 key={group}
                 dataKey={group}
+                name={formatSeriesLabel(group)}
                 stackId="csn-stack"
                 fill={resolveColor(group, index)}
                 radius={index === groups.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
@@ -237,6 +251,7 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
         const metric = mapping.metrics[0];
         const pieData = data.map((row) => ({
           name: String(row[mapping.dimension] ?? ''),
+          displayName: formatSeriesLabel(String(row[mapping.dimension] ?? '')),
           value: Number(row[metric] ?? 0),
         }));
         const isDonut = config.chart_type === 'donut';
@@ -249,14 +264,14 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
               nameKey="name"
               cx="50%"
               cy="50%"
-              outerRadius={150}
-              innerRadius={isDonut ? 60 : 0}
-              paddingAngle={isDonut ? 3 : 1}
-              label={({ name, percent }) =>
-                `${name} (${((percent ?? 0) * 100).toFixed(0)}%)`
-              }
-              labelLine={true}
-            >
+                outerRadius={150}
+                innerRadius={isDonut ? 60 : 0}
+                paddingAngle={isDonut ? 3 : 1}
+                label={({ payload: slicePayload, percent }) =>
+                  `${slicePayload.displayName} (${((percent ?? 0) * 100).toFixed(0)}%)`
+                }
+                labelLine={true}
+              >
               {pieData.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
@@ -265,10 +280,10 @@ export const DashboardRenderer: React.FC<DashboardRendererProps> = ({ payload })
               ))}
             </Pie>
             <Tooltip
-              formatter={(value) => [value, formatMetricName(metric)]}
+              formatter={(value, _name, item) => [value, item?.payload?.displayName ?? formatMetricName(metric)]}
               contentStyle={{ borderRadius: '8px', border: '1px solid #e2e8f0' }}
             />
-            <Legend />
+            <Legend formatter={(value) => formatSeriesLabel(String(value))} />
           </PieChart>
         );
       }
