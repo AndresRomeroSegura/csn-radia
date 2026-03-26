@@ -2,6 +2,14 @@ import React, { useState, useCallback, useMemo } from 'react';
 import type { ApexOptions } from 'apexcharts';
 import ReactApexChart from 'react-apexcharts';
 import {
+  ResponsiveContainer,
+  PieChart as RePieChart,
+  Pie as RePie,
+  Cell as ReCell,
+  Tooltip as ReTooltip,
+  Legend as ReLegend,
+} from 'recharts';
+import {
   Box,
   Typography,
   Paper,
@@ -84,11 +92,10 @@ function formatImportanceLabel(label: string): string {
 
 const CHART_COLORS = [
   '#003DA5',
-  '#1A66D1',
-  '#002F7A',
   '#4D88DB',
   '#002764',
   '#80AAE6',
+  '#001F52',
   '#B3CCF0',
 ];
 
@@ -182,7 +189,7 @@ function buildChartOptions(
         chart: { ...baseOptions.chart, type: chart_type === 'donut' ? 'donut' : 'pie' },
         labels,
         colors,
-        dataLabels: { enabled: false },
+        dataLabels: { enabled: true },
       },
     };
   }
@@ -250,6 +257,26 @@ function buildChartOptions(
       fill: { opacity: 1 },
     },
   };
+}
+
+function buildCircularChartData(payload: RenderPayload) {
+  const { data, config } = payload;
+  const { dimension, metrics } = config.mapping;
+  const primaryColor = config.styles.primary_color || '#003DA5';
+  const rawLabels = data.map((row) => String(row[dimension] ?? ''));
+  const metric = metrics[0];
+
+  return data.map((row, index) => {
+    const rawLabel = String(row[dimension] ?? '');
+    return {
+      name: rawLabel,
+      displayName: formatImportanceLabel(rawLabel),
+      value: Number(row[metric] ?? 0),
+      color:
+        IMPORTANCIA_COLORS[rawLabel]
+        ?? generatePalette(primaryColor, rawLabels.length)[index % rawLabels.length],
+    };
+  });
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -321,6 +348,11 @@ export const VisualizationEngine: React.FC<VisualizationEngineProps> = ({ payloa
 
   const { config } = payload;
   const exportEnabled = config.styles.export_enabled;
+  const isCircularChart = config.chart_type === 'pie' || config.chart_type === 'donut';
+  const circularData = useMemo(
+    () => (isCircularChart ? buildCircularChartData(payload) : []),
+    [isCircularChart, payload],
+  );
 
   // ── Render: Gráfico ──────────────────────────────────────────────────────
   return (
@@ -416,20 +448,53 @@ export const VisualizationEngine: React.FC<VisualizationEngineProps> = ({ payloa
 
       {/* ── Gráfico ── */}
       <Box p={3} id={`apex-chart-${payload.request_id}`}>
-        <ReactApexChart
-          key={`${payload.request_id}-${showGrid}`}
-          series={series}
-          options={options}
-          type={
-            config.chart_type === 'stacked_bar'
-              ? 'bar'
-              : config.chart_type === 'donut'
-              ? 'donut'
-              : (config.chart_type as 'line' | 'bar' | 'pie' | 'donut' | 'area' | 'scatter')
-          }
-          height={380}
-          width="100%"
-        />
+        {isCircularChart ? (
+          <Box sx={{ width: '100%', height: 380 }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <RePieChart>
+                <RePie
+                  data={circularData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={150}
+                  innerRadius={config.chart_type === 'donut' ? 60 : 0}
+                  paddingAngle={config.chart_type === 'donut' ? 3 : 1}
+                  label={({ payload: slicePayload, percent }) =>
+                    `${slicePayload.displayName} (${((percent ?? 0) * 100).toFixed(0)}%)`
+                  }
+                  labelLine={true}
+                >
+                  {circularData.map((entry, index) => (
+                    <ReCell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </RePie>
+                <ReTooltip
+                  formatter={(value, _name, item) => [
+                    value,
+                    (item?.payload as { displayName?: string } | undefined)?.displayName ?? '',
+                  ]}
+                  contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0' }}
+                />
+                <ReLegend formatter={(value: string) => formatImportanceLabel(String(value))} />
+              </RePieChart>
+            </ResponsiveContainer>
+          </Box>
+        ) : (
+          <ReactApexChart
+            key={`${payload.request_id}-${showGrid}`}
+            series={series}
+            options={options}
+            type={
+              config.chart_type === 'stacked_bar'
+                ? 'bar'
+                : (config.chart_type as 'line' | 'bar' | 'pie' | 'donut' | 'area' | 'scatter')
+            }
+            height={380}
+            width="100%"
+          />
+        )}
       </Box>
 
       {/* ── Footer con metadatos ── */}

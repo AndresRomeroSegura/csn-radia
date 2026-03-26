@@ -59,11 +59,10 @@ const CSN_COLORS = {
 
 const GENERIC_PALETTE = [
   '#003DA5',
-  '#1A66D1',
-  '#002F7A',
   '#4D88DB',
   '#002764',
   '#80AAE6',
+  '#001F52',
   '#B3CCF0',
 ];
 

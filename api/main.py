@@ -95,11 +95,10 @@ IMPORTANCIA_COLORS: dict[str, str] = {
 # Paleta genérica para series sin semántica de color
 GENERIC_PALETTE: list[str] = [
     "#003DA5",
-    "#1A66D1",
-    "#002F7A",
     "#4D88DB",
     "#002764",
     "#80AAE6",
+    "#001F52",
     "#B3CCF0",
 ]
 
